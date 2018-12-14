@@ -153,7 +153,7 @@ class DE(object):
 
     def _process_1_generation(self, current, gen, method, num, cross, sf, cr):
         # set random seed
-        # seed = now timestamp + current index + current generation
+        # seed = current timestamp + current index + current generation
         seed = int(datetime.datetime.now().timestamp()) + current + gen
         np.random.seed(seed)
 
