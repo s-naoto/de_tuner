@@ -33,11 +33,12 @@ class HyperTuner(object):
         self._tempfile = Path(self._tempdir.name + 'temp_data.gz')
         self._eval_function = None
         default_de_param = {'k_max': 100,
+                            'population': 10,
                             'method': 'best',
                             'num': 1,
                             'cross': 'bin',
-                            'scaling_factor': 0.7,
-                            'crossover_rate': 0.4}
+                            'sf': 0.7,
+                            'cr': 0.4}
         self._de_param = default_de_param
         self._de_param.update(params)
         self._kf = k_fold
@@ -109,9 +110,8 @@ class HyperTuner(object):
 
         # set evaluation function
         self._eval_function = eval_function
-
-        de = DE(objective_function=self._evaluate, ndim=len(self._parameters), pop=10,
-                lower_limit=lower_limit, upper_limit=upper_limit, minimize=minimize)
+        de = DE(objective_function=self._evaluate, ndim=len(self._parameters), lower_limit=lower_limit,
+                upper_limit=upper_limit, minimize=minimize)
 
         x_best = de.optimize_mp(**self._de_param)
 
