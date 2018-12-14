@@ -34,7 +34,7 @@ class HyperTuner(object):
         self._eval_function = None
         default_opt_param = {'k_max': 100,
                              'population': 10,
-                             'method': 'best',
+                             'mutant': 'best',
                              'num': 1,
                              'cross': 'bin',
                              'sf': 0.7,

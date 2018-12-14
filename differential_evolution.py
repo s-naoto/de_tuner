@@ -63,18 +63,18 @@ class DE(object):
         self._f_current[q] = fu[q].copy()
         self._x_current[q] = u[q].copy()
 
-    def _get_mutant_vector(self, current, method, num, sf):
+    def _get_mutant_vector(self, current, mutant, num, sf):
         """
 
         :param current: current index of population
-        :param method: mutation method
+        :param mutant: mutation method
         :param num: number of mutant vectors
         :param sf: scaling factor
         :return:
         """
         # mutant vector
         # best
-        if method == 'best':
+        if mutant == 'best':
             r_best = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)
             r = [r_best]
             r += np.random.choice([n for n in range(self._p) if n != r_best], 2 * num, replace=False).tolist()
@@ -82,13 +82,13 @@ class DE(object):
                 + sf * np.sum([self._x_current[r[m + 1]] - self._x_current[r[m + 2]] for m in range(num)], axis=0)
 
         # rand
-        elif method == 'rand':
+        elif mutant == 'rand':
             r = np.random.choice(range(self._p), 2 * num + 1, replace=False).tolist()
             v = self._x_current[r[0]] \
                 + sf * np.sum([self._x_current[r[m + 1]] - self._x_current[r[m + 2]] for m in range(num)], axis=0)
 
         # current-to-rand
-        elif method == 'current-to-rand':
+        elif mutant == 'current-to-rand':
             r = [current]
             r += np.random.choice([n for n in range(self._p) if n != current], 2 * num + 1, replace=False).tolist()
             v = self._x_current[r[0]] \
@@ -96,7 +96,7 @@ class DE(object):
                 + sf * np.sum([self._x_current[r[m + 2]] - self._x_current[r[m + 3]] for m in range(num)], axis=0)
 
         # current-to-best
-        elif method == 'current-to-best':
+        elif mutant == 'current-to-best':
             r_best = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)
             r = [r_best, current]
             r += np.random.choice([
@@ -106,7 +106,7 @@ class DE(object):
                 + sf * np.sum([self._x_current[r[m + 2]] - self._x_current[r[m + 3]] for m in range(num)], axis=0)
 
         else:
-            raise ValueError('invalid `method`: {}'.format(method))
+            raise ValueError('invalid `mutant`: {}'.format(mutant))
 
         return v
 
@@ -151,14 +151,14 @@ class DE(object):
         else:
             return self._of(x)
 
-    def _process_1_generation(self, current, gen, method, num, cross, sf, cr):
+    def _process_1_generation(self, current, gen, mutant, num, cross, sf, cr):
         # set random seed
         # seed = current timestamp + current index + current generation
         seed = int(datetime.datetime.now().timestamp()) + current + gen
         np.random.seed(seed)
 
         # mutation
-        v_p = self._get_mutant_vector(current, method, num, sf)
+        v_p = self._get_mutant_vector(current, mutant, num, sf)
 
         # crossover
         u_p = self._crossover(v_p, self._x_current[current], cross, cr)
@@ -166,9 +166,9 @@ class DE(object):
         # evaluation
         return current, u_p, self._evaluate_with_check(u_p)
 
-    def _exec_1_generation(self, gen, method, num, cross, sf, cr, proc):
+    def _exec_1_generation(self, gen, mutant, num, cross, sf, cr, proc):
         with mp.Pool(proc) as pool:
-            results = pool.map(partial(self._process_1_generation, gen=gen, method=method, num=num, cross=cross,
+            results = pool.map(partial(self._process_1_generation, gen=gen, mutant=mutant, num=num, cross=cross,
                                        sf=sf, cr=cr), range(self._p))
 
         u_current = []
@@ -181,12 +181,12 @@ class DE(object):
     def _evaluate(self, current, u):
         return current, self._evaluate_with_check(u)
 
-    def optimize_mp(self, k_max, population=10, method='best', num=1, cross='bin', sf=0.7, cr=0.3, proc=None):
+    def optimize_mp(self, k_max, population=10, mutant='best', num=1, cross='bin', sf=0.7, cr=0.3, proc=None):
         """
 
         :param k_max: max-iterations
         :param population: number of populations
-        :param method: mutation method ['best', 'rand', 'current-to-best', 'current-to-rand']
+        :param mutant: mutation method ['best', 'rand', 'current-to-best', 'current-to-rand']
         :param num: number of mutant vectors
         :param cross: crossover method ['bin', 'exp']
         :param sf: scaling-factor F
@@ -209,7 +209,7 @@ class DE(object):
         self._f_current = np.array([r[1] for r in sorted(results)])
 
         for k in range(k_max):
-            u_current, fu = self._exec_1_generation(k, method, num, cross, sf, cr, proc)
+            u_current, fu = self._exec_1_generation(k, mutant, num, cross, sf, cr, proc)
 
             # selection
             self._update(np.stack(u_current, axis=0), np.array(fu))
@@ -224,12 +224,12 @@ class DE(object):
         logger.info('x_best = {}'.format(x_best))
         return x_best
 
-    def optimize(self, k_max, population=10, method='best', num=1, cross='bin', sf=0.7, cr=0.3):
+    def optimize(self, k_max, population=10, mutant='best', num=1, cross='bin', sf=0.7, cr=0.3):
         """
 
         :param k_max: max-iterations
         :param population: number of populations
-        :param method: mutation method ['best', 'rand', 'current-to-best', 'current-to-rand']
+        :param mutant: mutation method ['best', 'rand', 'current-to-best', 'current-to-rand']
         :param num: number of mutant vectors
         :param cross: crossover method ['bin', 'exp']
         :param sf: scaling-factor F
@@ -253,7 +253,7 @@ class DE(object):
             fu = []
             for p in range(self._p):
                 # mutation
-                v_p = self._get_mutant_vector(p, method=method, num=num, sf=sf)
+                v_p = self._get_mutant_vector(p, mutant=mutant, num=num, sf=sf)
 
                 # crossover
                 u_p = self._crossover(v_p, self._x_current[p], cross=cross, cr=cr)
