@@ -10,11 +10,13 @@ logger = getLogger('__name__')
 
 
 class HyperTuner(object):
-    def __init__(self, model, space):
+    def __init__(self, model, space, k_fold=5, **params):
         """
 
-        :param model:
-        :param space:
+        :param model: target model
+        :param space: search space
+        :param k_fold: number of folders for K-fold CV
+        :param params: parameters for DE
 
         space = {
             'parameter': {'scale': linear', 'range': [0, 1.5]},
@@ -30,6 +32,15 @@ class HyperTuner(object):
         self._tempdir = TemporaryDirectory()
         self._tempfile = Path(self._tempdir.name + 'temp_data.gz')
         self._eval_function = None
+        default_de_param = {'k_max': 100,
+                            'method': 'best',
+                            'num': 1,
+                            'cross': 'bin',
+                            'scaling_factor': 0.7,
+                            'crossover_rate': 0.4}
+        self._de_param = default_de_param
+        self._de_param.update(params)
+        self._kf = k_fold
 
     def __del__(self):
         self._tempdir.cleanup()
@@ -73,7 +84,7 @@ class HyperTuner(object):
             model = self._model.set_params(**param)
 
             # train model using CV (K-fold)
-            skf = KFold(n_splits=5, shuffle=True)
+            skf = KFold(n_splits=self._kf, shuffle=True)
             scores = []
             for train, test in skf.split(input_data, targets):
                 x_tr, t_tr = input_data[train], targets[train]
@@ -102,7 +113,7 @@ class HyperTuner(object):
         de = DE(objective_function=self._evaluate, ndim=len(self._parameters), pop=10,
                 lower_limit=lower_limit, upper_limit=upper_limit, minimize=minimize)
 
-        x_best = de.optimize_mp(100, method='best', num=2, cross='bin', scaling_factor=0.7, crossover_rate=0.4)
+        x_best = de.optimize_mp(**self._de_param)
 
         return self._translate_to_origin(x_best)
 

@@ -206,7 +206,6 @@ class DE(object):
         self._f_current = np.array([r[1] for r in sorted(results)])
 
         for k in range(k_max):
-
             u_current, fu = self._exec_1_generation(k, method, num, cross, scaling_factor, crossover_rate, proc)
 
             # selection
