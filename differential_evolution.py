@@ -92,7 +92,7 @@ class DE(object):
             r = [current]
             r += np.random.choice([n for n in range(self._p) if n != current], 2 * num + 1, replace=False).tolist()
             v = self._x_current[r[0]] \
-                + np.random.rand() * (self._x_current[r[1]] - self._x_current[r[0]]) \
+                + sf * (self._x_current[r[1]] - self._x_current[r[0]]) \
                 + sf * np.sum([self._x_current[r[m + 2]] - self._x_current[r[m + 3]] for m in range(num)], axis=0)
 
         # current-to-best
