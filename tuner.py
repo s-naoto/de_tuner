@@ -21,7 +21,7 @@ class HyperTuner(object):
         space = {
             'parameter': {'scale': linear', 'range': [0, 1.5]},
             'parameter': {'scale': 'log', 'range': [-1, 2]},
-            'parameter': {'scale': 'choice', 'range': ['a', 'b', 'c']},
+            'parameter': {'scale': 'category', 'range': ['a', 'b', 'c']},
             'parameter': {'scale': 'integer', 'range': [0, 10]}
         }
         """
@@ -67,7 +67,7 @@ class HyperTuner(object):
         for n, k in enumerate(self._parameters):
             if self._space[k]['scale'] == 'log':
                 org_x[k] = np.power(10, x[n])
-            elif self._space[k]['scale'] == 'choice':
+            elif self._space[k]['scale'] == 'category':
                 org_x[k] = self._space[k]['range'][int(x[n])]
             elif self._space[k]['scale'] == 'integer':
                 org_x[k] = int(x[n])
@@ -125,12 +125,12 @@ if __name__ == '__main__':
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.metrics import accuracy_score
 
-    search_space = {'n_estimators': {'scale': 'choice', 'range': [10, 50, 100, 200, 250, 300]},
+    search_space = {'n_estimators': {'scale': 'category', 'range': [10, 50, 100, 200, 250, 300]},
                     'max_depth': {'scale': 'integer', 'range': [1, 8]},
                     'min_samples_split': {'scale': 'log', 'range': [-3, 0]},
                     'min_samples_leaf': {'scale': 'linear', 'range': [0, 0.5]},
                     'min_weight_fraction_leaf': {'scale': 'linear', 'range': [0, 0.5]},
-                    'max_features': {'scale': 'choice', 'range': ['auto', 'sqrt', 'log2', None]}}
+                    'max_features': {'scale': 'category', 'range': ['auto', 'sqrt', 'log2', None]}}
 
     dataset = load_digits()
 
