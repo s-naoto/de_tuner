@@ -77,6 +77,9 @@ class DE(object):
         :param sf: scaling factor
         :return:
         """
+
+        assert num > 0, "'num' must be greater than 0."
+
         # mutant vector
         # best
         if mutant == 'best':
