@@ -43,7 +43,7 @@ class DE(object):
         else:
             self._x_current = np.random.rand(self._p, self._nd) * (self._up_lim - self._low_lim) + self._low_lim
 
-    def _update(self, u, fu):
+    def _selection(self, u, fu):
         """
 
         :param u: trial vectors
@@ -212,7 +212,7 @@ class DE(object):
             u_current, fu = self._exec_1_generation(k, mutant, num, cross, sf, cr, proc)
 
             # selection
-            self._update(np.stack(u_current, axis=0), np.array(fu))
+            self._selection(np.stack(u_current, axis=0), np.array(fu))
 
             best_score = np.amin(self._f_current) if self._is_minimize else np.amax(self._f_current)
             logger.info('k={} best score = {}'.format(k, best_score))
@@ -263,7 +263,7 @@ class DE(object):
                 fu.append(self._evaluate_with_check(u_p))
 
             # selection
-            self._update(np.stack(u_current, axis=0), np.array(fu))
+            self._selection(np.stack(u_current, axis=0), np.array(fu))
 
             best_score = np.amin(self._f_current) if self._is_minimize else np.amax(self._f_current)
             logger.info('k={} best score = {}'.format(k, best_score))
