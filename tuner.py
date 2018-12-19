@@ -10,7 +10,7 @@ logger = getLogger('__name__')
 
 
 class HyperTuner(object):
-    def __init__(self, model, space: dict, k_fold: int=5, **params):
+    def __init__(self, model, space: dict, k_fold: int = 5, **params):
         """
 
         :param model: target model
@@ -102,7 +102,7 @@ class HyperTuner(object):
             score = np.inf
         return score
 
-    def tuning(self, eval_function: callable, x: np.ndarray, t: np.ndarray, minimize: bool=True):
+    def tuning(self, eval_function: callable, x: np.ndarray, t: np.ndarray, minimize: bool = True):
         joblib.dump((x, t), self._tempfile)
 
         # set DE
@@ -125,12 +125,14 @@ if __name__ == '__main__':
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.metrics import accuracy_score
 
-    search_space = {'n_estimators': {'scale': 'category', 'range': [10, 50, 100, 200, 250, 300]},
-                    'max_depth': {'scale': 'integer', 'range': [1, 8]},
-                    'min_samples_split': {'scale': 'log', 'range': [-3, 0]},
-                    'min_samples_leaf': {'scale': 'linear', 'range': [0, 0.5]},
-                    'min_weight_fraction_leaf': {'scale': 'linear', 'range': [0, 0.5]},
-                    'max_features': {'scale': 'category', 'range': ['auto', 'sqrt', 'log2', None]}}
+    search_space = {
+        'n_estimators': {'scale': 'category', 'range': [10, 50, 100, 200, 250, 300]},
+        'max_depth': {'scale': 'integer', 'range': [1, 8]},
+        'min_samples_split': {'scale': 'log', 'range': [-3, 0]},
+        'min_samples_leaf': {'scale': 'linear', 'range': [0, 0.5]},
+        'min_weight_fraction_leaf': {'scale': 'linear', 'range': [0, 0.5]},
+        'max_features': {'scale': 'category', 'range': ['auto', 'sqrt', 'log2', None]}
+    }
 
     dataset = load_digits()
 
