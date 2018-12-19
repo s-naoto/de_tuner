@@ -12,7 +12,12 @@ class DE(object):
     Differential Evolution
     """
 
-    def __init__(self, objective_function, ndim, lower_limit, upper_limit, minimize=True):
+    def __init__(self,
+                 objective_function: callable,
+                 ndim: int,
+                 lower_limit: np.ndarray,
+                 upper_limit: np.ndarray,
+                 minimize: bool = True):
         """
 
         :param objective_function: f(x) callable function
@@ -181,7 +186,15 @@ class DE(object):
     def _evaluate(self, current, u):
         return current, self._evaluate_with_check(u)
 
-    def optimize_mp(self, k_max, population=10, mutant='best', num=1, cross='bin', sf=0.7, cr=0.3, proc=None):
+    def optimize_mp(self,
+                    k_max: int,
+                    population: int = 10,
+                    mutant: str = 'best',
+                    num: int = 1,
+                    cross: str = 'bin',
+                    sf: float = 0.7,
+                    cr: float = 0.3,
+                    proc: [int, None] = None):
         """
 
         :param k_max: max-iterations
@@ -224,7 +237,14 @@ class DE(object):
         logger.info('x_best = {}'.format(x_best))
         return x_best
 
-    def optimize(self, k_max, population=10, mutant='best', num=1, cross='bin', sf=0.7, cr=0.3):
+    def optimize(self,
+                 k_max: int,
+                 population: int = 10,
+                 mutant: str = 'best',
+                 num: int = 1,
+                 cross: str = 'bin',
+                 sf: float = 0.7,
+                 cr: float = 0.3):
         """
 
         :param k_max: max-iterations

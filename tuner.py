@@ -10,7 +10,7 @@ logger = getLogger('__name__')
 
 
 class HyperTuner(object):
-    def __init__(self, model, space, k_fold=5, **params):
+    def __init__(self, model, space: dict, k_fold: int=5, **params):
         """
 
         :param model: target model
@@ -102,7 +102,7 @@ class HyperTuner(object):
             score = np.inf
         return score
 
-    def tuning(self, eval_function: callable, x, t, minimize=True):
+    def tuning(self, eval_function: callable, x: np.ndarray, t: np.ndarray, minimize: bool=True):
         joblib.dump((x, t), self._tempfile)
 
         # set DE
