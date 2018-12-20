@@ -157,7 +157,12 @@ class DE(object):
         if np.any(x < self._low_lim) or np.any(x > self._up_lim):
             return np.inf if self._is_minimize else -np.inf
         else:
-            return self._of(x)
+            try:
+                f = self._of(x)
+            except Exception as ex:
+                logger.error(ex)
+                f = np.inf if self._is_minimize else -np.inf
+            return f
 
     def _process_1_generation(self, current, gen, mutant, num, cross, sf, cr):
         # set random seed
@@ -269,7 +274,7 @@ class DE(object):
         self.initialization()
 
         # get fitness of initial x
-        self._f_current = np.array([self._of(x) for x in self._x_current])
+        self._f_current = np.array([self._evaluate_with_check(x) for x in self._x_current])
 
         for k in range(k_max):
             u_current = []

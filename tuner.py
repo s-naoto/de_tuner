@@ -79,28 +79,22 @@ class HyperTuner(object):
         # load data from temporary directory
         input_data, targets = joblib.load(self._tempfile)
 
-        try:
-            # set model using parameter x
-            param = self._translate_to_origin(x)
-            model = self._model.set_params(**param)
+        # set model using parameter x
+        param = self._translate_to_origin(x)
+        model = self._model.set_params(**param)
 
-            # train model using CV (K-fold)
-            skf = KFold(n_splits=self._kf, shuffle=True)
-            scores = []
-            for train, test in skf.split(input_data, targets):
-                x_tr, t_tr = input_data[train], targets[train]
-                x_te, t_te = input_data[test], targets[test]
+        # train model using CV (K-fold)
+        skf = KFold(n_splits=self._kf, shuffle=True)
+        scores = []
+        for train, test in skf.split(input_data, targets):
+            x_tr, t_tr = input_data[train], targets[train]
+            x_te, t_te = input_data[test], targets[test]
 
-                model.fit(x_tr, t_tr)
-                scores.append(self._eval_function(y_pred=model.predict(x_te), y_true=t_te))
+            model.fit(x_tr, t_tr)
+            scores.append(self._eval_function(y_pred=model.predict(x_te), y_true=t_te))
 
-            # average score
-            score = np.average(scores)
-        except Exception as ex:
-            logger.error(ex)
-            # if some errors are occurred, score is +infinity.
-            score = np.inf
-        return score
+        # average score
+        return np.average(scores)
 
     def tuning(self, eval_function: callable, x: np.ndarray, t: np.ndarray, minimize: bool = True):
         joblib.dump((x, t), self._tempfile)
