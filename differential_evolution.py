@@ -155,7 +155,7 @@ class DE(object):
 
     def _evaluate_with_check(self, x):
         if np.any(x < self._low_lim) or np.any(x > self._up_lim):
-            return np.inf
+            return np.inf if self._is_minimize else -np.inf
         else:
             return self._of(x)
 
