@@ -1,5 +1,5 @@
 import numpy as np
-import multiprocessing as mp
+from concurrent import futures
 from logging import getLogger
 import datetime
 from functools import partial
@@ -180,9 +180,9 @@ class DE(object):
         return current, u_p, self._evaluate_with_check(u_p)
 
     def _exec_1_generation(self, gen, mutant, num, cross, sf, cr, proc):
-        with mp.Pool(proc) as pool:
-            results = pool.map(partial(self._process_1_generation, gen=gen, mutant=mutant, num=num, cross=cross,
-                                       sf=sf, cr=cr), range(self._p))
+        with futures.ProcessPoolExecutor(proc) as executor:
+            results = executor.map(partial(self._process_1_generation, gen=gen, mutant=mutant, num=num, cross=cross,
+                                           sf=sf, cr=cr), range(self._p))
 
         u_current = []
         fu = []
@@ -191,7 +191,8 @@ class DE(object):
             fu.append(fp)
         return u_current, fu
 
-    def _evaluate(self, current, u):
+    def _evaluate(self, params):
+        current, u = params
         return current, self._evaluate_with_check(u)
 
     def optimize_mp(self,
@@ -225,9 +226,10 @@ class DE(object):
         self.initialization()
 
         # get fitness of initial x
-        with mp.Pool(proc) as pool:
-            results = pool.starmap(self._evaluate, [(n, u) for n, u in zip(range(self._p), self._x_current)])
-        self._f_current = np.array([r[1] for r in sorted(results)])
+        with futures.ProcessPoolExecutor(proc) as executor:
+            results = executor.map(self._evaluate, zip(range(self._p), self._x_current))
+
+        self._f_current = np.array([r[1] for r in sorted(list(results))])
 
         for k in range(k_max):
             u_current, fu = self._exec_1_generation(k, mutant, num, cross, sf, cr, proc)
