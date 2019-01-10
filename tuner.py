@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.model_selection import KFold
 from tempfile import TemporaryDirectory
 import joblib
-from .differential_evolution import DE
+from differential_evolution import DE
 from pathlib import Path
 from logging import getLogger, basicConfig
 
@@ -22,7 +22,8 @@ class HyperTuner(object):
             'parameter': {'scale': linear', 'range': [0, 1.5]},
             'parameter': {'scale': 'log', 'range': [-1, 2]},
             'parameter': {'scale': 'category', 'range': ['a', 'b', 'c']},
-            'parameter': {'scale': 'integer', 'range': [0, 10]}
+            'parameter': {'scale': 'integer', 'range': [0, 10]},
+            'parameter': 'static'
         }
         """
         self._model = model
@@ -50,6 +51,10 @@ class HyperTuner(object):
         lowers = []
         uppers = []
         for k in self._parameters:
+            # if parameter k is static parameter, then skip
+            if not isinstance(self._space[k], dict):
+                continue
+
             if self._space[k]['scale'] in ['linear', 'log']:
                 lowers.append(self._space[k]['range'][0])
                 uppers.append(self._space[k]['range'][1])
@@ -65,14 +70,19 @@ class HyperTuner(object):
     def _translate_to_origin(self, x):
         org_x = {}
         for n, k in enumerate(self._parameters):
-            if self._space[k]['scale'] == 'log':
-                org_x[k] = np.power(10, x[n])
-            elif self._space[k]['scale'] == 'category':
-                org_x[k] = self._space[k]['range'][int(x[n])]
-            elif self._space[k]['scale'] == 'integer':
-                org_x[k] = int(x[n])
+            # if parameter k is static parameter, then set it.
+            if not isinstance(self._space[k], dict):
+                org_x[k] = self._space[k]
+            # otherwise, set parameters using x.
             else:
-                org_x[k] = x[n]
+                if self._space[k]['scale'] == 'log':
+                    org_x[k] = np.power(10, x[n])
+                elif self._space[k]['scale'] == 'category':
+                    org_x[k] = self._space[k]['range'][int(x[n])]
+                elif self._space[k]['scale'] == 'integer':
+                    org_x[k] = int(x[n])
+                else:
+                    org_x[k] = x[n]
         return org_x
 
     def _evaluate(self, x):
@@ -104,7 +114,7 @@ class HyperTuner(object):
 
         # set evaluation function
         self._eval_function = eval_function
-        optimizer = DE(objective_function=self._evaluate, ndim=len(self._parameters), lower_limit=lower_limit,
+        optimizer = DE(objective_function=self._evaluate, ndim=len(lower_limit), lower_limit=lower_limit,
                        upper_limit=upper_limit, minimize=minimize)
 
         x_best = optimizer.optimize_mp(**self._optimizer_param)
@@ -125,7 +135,8 @@ if __name__ == '__main__':
         'min_samples_split': {'scale': 'log', 'range': [-3, 0]},
         'min_samples_leaf': {'scale': 'linear', 'range': [0, 0.5]},
         'min_weight_fraction_leaf': {'scale': 'linear', 'range': [0, 0.5]},
-        'max_features': {'scale': 'category', 'range': ['auto', 'sqrt', 'log2', None]}
+        'max_features': 'sqrt',
+        'n_jobs': 4
     }
 
     dataset = load_digits()
