@@ -26,7 +26,7 @@ class DECore(object):
                                         otherwise set False and turning as maximization.
         """
         self._of = objective_function
-        self._p = None
+        self._pop = None
         self._nd = ndim
         self._x_current = None
         self._low_lim = lower_limit
@@ -44,7 +44,7 @@ class DECore(object):
         if x_init:
             self._x_current = x_init
         else:
-            self._x_current = np.random.rand(self._p, self._nd) * (self._up_lim - self._low_lim) + self._low_lim
+            self._x_current = np.random.rand(self._pop, self._nd) * (self._up_lim - self._low_lim) + self._low_lim
 
     def _selection(self, p, u, fu):
         """

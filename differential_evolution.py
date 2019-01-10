@@ -74,20 +74,20 @@ class DE(DECore):
         if mutant == 'best':
             r_best = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)
             r = [r_best]
-            r += np.random.choice([n for n in range(self._p) if n != r_best], 2 * num, replace=False).tolist()
+            r += np.random.choice([n for n in range(self._pop) if n != r_best], 2 * num, replace=False).tolist()
             v = self._x_current[r[0]] \
                 + sf * np.sum([self._x_current[r[m + 1]] - self._x_current[r[m + 2]] for m in range(num)], axis=0)
 
         # rand
         elif mutant == 'rand':
-            r = np.random.choice(range(self._p), 2 * num + 1, replace=False).tolist()
+            r = np.random.choice(range(self._pop), 2 * num + 1, replace=False).tolist()
             v = self._x_current[r[0]] \
                 + sf * np.sum([self._x_current[r[m + 1]] - self._x_current[r[m + 2]] for m in range(num)], axis=0)
 
         # current-to-rand
         elif mutant == 'current-to-rand':
             r = [current]
-            r += np.random.choice([n for n in range(self._p) if n != current], 2 * num + 1, replace=False).tolist()
+            r += np.random.choice([n for n in range(self._pop) if n != current], 2 * num + 1, replace=False).tolist()
             v = self._x_current[r[0]] \
                 + sf * (self._x_current[r[1]] - self._x_current[r[0]]) \
                 + sf * np.sum([self._x_current[r[m + 2]] - self._x_current[r[m + 3]] for m in range(num)], axis=0)
@@ -97,7 +97,7 @@ class DE(DECore):
             r_best = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)
             r = [r_best, current]
             r += np.random.choice([
-                n for n in range(self._p) if n not in [r_best, current]], 2 * num, replace=False).tolist()
+                n for n in range(self._pop) if n not in [r_best, current]], 2 * num, replace=False).tolist()
             v = self._x_current[r[0]] \
                 + sf * (self._x_current[r[1]] - self._x_current[r[0]]) \
                 + sf * np.sum([self._x_current[r[m + 2]] - self._x_current[r[m + 3]] for m in range(num)], axis=0)
@@ -187,14 +187,14 @@ class DE(DECore):
             DE/best/2/exp --> method='best', num=2, cross='exp'
         """
         # set population
-        self._p = population
+        self._pop = population
 
         # initialize
         self.initialization()
 
         # get fitness of initial x
         with futures.ProcessPoolExecutor(proc) as executor:
-            results = executor.map(self._evaluate, zip(range(self._p), self._x_current))
+            results = executor.map(self._evaluate, zip(range(self._pop), self._x_current))
 
         self._f_current = np.array([r[1] for r in sorted(list(results))])
 
@@ -203,7 +203,7 @@ class DE(DECore):
             with futures.ProcessPoolExecutor(proc) as executor:
                 results = executor.map(partial(self._process_1_generation, gen=k, mutant=mutant, num=num,
                                                cross=cross, sf=sf, cr=cr),
-                                       range(self._p))
+                                       range(self._pop))
 
             # correct results
             _x_current = []
@@ -249,7 +249,7 @@ class DE(DECore):
             DE/best/2/exp --> method='best', num=2, cross='exp'
         """
         # set population
-        self._p = population
+        self._pop = population
 
         # initialize
         self.initialization()
@@ -258,7 +258,7 @@ class DE(DECore):
         self._f_current = np.array([self._evaluate_with_check(x) for x in self._x_current])
 
         for k in range(k_max):
-            for p in range(self._p):
+            for p in range(self._pop):
                 # mutation
                 v_p = self._mutation(p, mutant=mutant, num=num, sf=sf)
 
