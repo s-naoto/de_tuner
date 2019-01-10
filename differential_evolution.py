@@ -4,7 +4,7 @@ from logging import getLogger
 import datetime
 from functools import partial
 
-logger = getLogger('__name__')
+logger = getLogger(__name__)
 
 
 class DE(object):

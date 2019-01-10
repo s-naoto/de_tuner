@@ -2,11 +2,11 @@ import numpy as np
 from sklearn.model_selection import KFold
 from tempfile import TemporaryDirectory
 import joblib
-from differential_evolution import DE
+from .differential_evolution import DE
 from pathlib import Path
 from logging import getLogger, basicConfig
 
-logger = getLogger('__name__')
+logger = getLogger(__name__)
 
 
 class HyperTuner(object):
