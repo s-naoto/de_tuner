@@ -30,6 +30,8 @@ class HyperTuner(object):
         assert isinstance(space, dict)
         self._space = space
         self._parameters = list(self._space.keys())
+        self._static_params = [p for p in self._parameters if not isinstance(self._space[p], dict)]
+        self._variable_params = [p for p in self._parameters if isinstance(self._space[p], dict)]
         self._tempdir = TemporaryDirectory()
         self._tempfile = Path(self._tempdir.name + 'temp_data.gz')
         self._eval_function = None
@@ -50,11 +52,7 @@ class HyperTuner(object):
     def _get_search_limits(self):
         lowers = []
         uppers = []
-        for k in self._parameters:
-            # if parameter k is static parameter, then skip
-            if not isinstance(self._space[k], dict):
-                continue
-
+        for k in self._variable_params:
             if self._space[k]['scale'] in ['linear', 'log']:
                 lowers.append(self._space[k]['range'][0])
                 uppers.append(self._space[k]['range'][1])
@@ -69,20 +67,19 @@ class HyperTuner(object):
 
     def _translate_to_origin(self, x):
         org_x = {}
-        for n, k in enumerate(self._parameters):
-            # if parameter k is static parameter, then set it.
-            if not isinstance(self._space[k], dict):
-                org_x[k] = self._space[k]
-            # otherwise, set parameters using x.
+        for n, k in enumerate(self._variable_params):
+            if self._space[k]['scale'] == 'log':
+                org_x[k] = np.power(10, x[n])
+            elif self._space[k]['scale'] == 'category':
+                org_x[k] = self._space[k]['range'][int(x[n])]
+            elif self._space[k]['scale'] == 'integer':
+                org_x[k] = int(x[n])
             else:
-                if self._space[k]['scale'] == 'log':
-                    org_x[k] = np.power(10, x[n])
-                elif self._space[k]['scale'] == 'category':
-                    org_x[k] = self._space[k]['range'][int(x[n])]
-                elif self._space[k]['scale'] == 'integer':
-                    org_x[k] = int(x[n])
-                else:
-                    org_x[k] = x[n]
+                org_x[k] = x[n]
+
+        # static parameters
+        for k in self._static_params:
+            org_x[k] = self._space[k]
         return org_x
 
     def _evaluate(self, x):
