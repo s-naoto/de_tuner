@@ -132,7 +132,7 @@ if __name__ == '__main__':
         'min_samples_split': {'scale': 'log', 'range': [-3, 0]},
         'min_samples_leaf': {'scale': 'linear', 'range': [0, 0.5]},
         'min_weight_fraction_leaf': {'scale': 'linear', 'range': [0, 0.5]},
-        'max_features': 'sqrt',
+        'max_features': {'scale': 'category', 'range': ['auto', 'sqrt', 'log2', None]},
         'n_jobs': 4
     }
 
