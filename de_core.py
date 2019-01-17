@@ -46,14 +46,7 @@ class DECore(object):
         else:
             self._x_current = np.random.rand(self._pop, self._nd) * (self._up_lim - self._low_lim) + self._low_lim
 
-    def _selection(self, p, u, fu):
-        """
-
-        :param p: current index
-        :param u: trial vectors
-        :param fu: evaluation values of trial vectors
-        :return:
-        """
+    def _selection(self, **kwargs):
 
         pass
 
