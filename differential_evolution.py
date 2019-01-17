@@ -4,10 +4,12 @@ from logging import getLogger
 import datetime
 from functools import partial
 
+from de_core import DECore
+
 logger = getLogger(__name__)
 
 
-class DE(object):
+class DE(DECore):
     """
     Differential Evolution
     """
@@ -27,48 +29,35 @@ class DE(object):
         :param minimize: minimize flag. if the problem is minimization, then set True.
                                         otherwise set False and turning as maximization.
         """
-        self._of = objective_function
-        self._p = None
-        self._nd = ndim
-        self._x_current = None
-        self._low_lim = lower_limit
-        self._up_lim = upper_limit
-        self._f_current = None
-        self._is_minimize = minimize
 
-    def initialization(self, x_init=None):
+        super(DE, self).__init__(objective_function=objective_function,
+                                 ndim=ndim,
+                                 lower_limit=lower_limit,
+                                 upper_limit=upper_limit,
+                                 minimize=minimize)
+
+    def _selection(self, p, u, fu):
         """
 
-        :param x_init: initial value of x (optional)
-        :return:
-        """
-        # initialize x
-        if x_init:
-            self._x_current = x_init
-        else:
-            self._x_current = np.random.rand(self._p, self._nd) * (self._up_lim - self._low_lim) + self._low_lim
-
-    def _selection(self, u, fu):
-        """
-
+        :param p: current index
         :param u: trial vectors
         :param fu: evaluation values of trial vectors
         :return:
         """
         # score is better than current
-        q1 = fu < self._f_current if self._is_minimize else fu > self._f_current
+        q1 = fu <= self._f_current[p] if self._is_minimize else fu >= self._f_current[p]
         # over lower limit
-        q2 = np.any(u < self._low_lim, axis=1)
+        q2 = np.any(u < self._low_lim)
         # over upper limit
-        q3 = np.any(u > self._up_lim, axis=1)
+        q3 = np.any(u > self._up_lim)
         # q1 ^ ~q2 ^ ~q3
-        q = np.where(q1 * ~q2 * ~q3)
+        q = q1 * ~q2 * ~q3
 
-        # update current values
-        self._f_current[q] = fu[q].copy()
-        self._x_current[q] = u[q].copy()
+        f_p1 = fu if q else self._f_current[p]
+        x_p1 = u if q else self._x_current[p]
+        return f_p1, x_p1
 
-    def _get_mutant_vector(self, current, mutant, num, sf):
+    def _mutation(self, current, mutant, num, sf):
         """
 
         :param current: current index of population
@@ -85,20 +74,20 @@ class DE(object):
         if mutant == 'best':
             r_best = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)
             r = [r_best]
-            r += np.random.choice([n for n in range(self._p) if n != r_best], 2 * num, replace=False).tolist()
+            r += np.random.choice([n for n in range(self._pop) if n != r_best], 2 * num, replace=False).tolist()
             v = self._x_current[r[0]] \
                 + sf * np.sum([self._x_current[r[m + 1]] - self._x_current[r[m + 2]] for m in range(num)], axis=0)
 
         # rand
         elif mutant == 'rand':
-            r = np.random.choice(range(self._p), 2 * num + 1, replace=False).tolist()
+            r = np.random.choice(range(self._pop), 2 * num + 1, replace=False).tolist()
             v = self._x_current[r[0]] \
                 + sf * np.sum([self._x_current[r[m + 1]] - self._x_current[r[m + 2]] for m in range(num)], axis=0)
 
         # current-to-rand
         elif mutant == 'current-to-rand':
             r = [current]
-            r += np.random.choice([n for n in range(self._p) if n != current], 2 * num + 1, replace=False).tolist()
+            r += np.random.choice([n for n in range(self._pop) if n != current], 2 * num + 1, replace=False).tolist()
             v = self._x_current[r[0]] \
                 + sf * (self._x_current[r[1]] - self._x_current[r[0]]) \
                 + sf * np.sum([self._x_current[r[m + 2]] - self._x_current[r[m + 3]] for m in range(num)], axis=0)
@@ -108,7 +97,7 @@ class DE(object):
             r_best = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)
             r = [r_best, current]
             r += np.random.choice([
-                n for n in range(self._p) if n not in [r_best, current]], 2 * num, replace=False).tolist()
+                n for n in range(self._pop) if n not in [r_best, current]], 2 * num, replace=False).tolist()
             v = self._x_current[r[0]] \
                 + sf * (self._x_current[r[1]] - self._x_current[r[0]]) \
                 + sf * np.sum([self._x_current[r[m + 2]] - self._x_current[r[m + 3]] for m in range(num)], axis=0)
@@ -153,17 +142,6 @@ class DE(object):
 
         return u
 
-    def _evaluate_with_check(self, x):
-        if np.any(x < self._low_lim) or np.any(x > self._up_lim):
-            return np.inf if self._is_minimize else -np.inf
-        else:
-            try:
-                f = self._of(x)
-            except Exception as ex:
-                logger.error(ex)
-                f = np.inf if self._is_minimize else -np.inf
-            return f
-
     def _process_1_generation(self, current, gen, mutant, num, cross, sf, cr):
         # set random seed
         # seed = current timestamp + current index + current generation
@@ -171,25 +149,14 @@ class DE(object):
         np.random.seed(seed)
 
         # mutation
-        v_p = self._get_mutant_vector(current, mutant, num, sf)
+        v_p = self._mutation(current, mutant, num, sf)
 
         # crossover
         u_p = self._crossover(v_p, self._x_current[current], cross, cr)
 
-        # evaluation
-        return current, u_p, self._evaluate_with_check(u_p)
-
-    def _exec_1_generation(self, gen, mutant, num, cross, sf, cr, proc):
-        with futures.ProcessPoolExecutor(proc) as executor:
-            results = executor.map(partial(self._process_1_generation, gen=gen, mutant=mutant, num=num, cross=cross,
-                                           sf=sf, cr=cr), range(self._p))
-
-        u_current = []
-        fu = []
-        for _, u, fp in sorted(results):
-            u_current.append(u)
-            fu.append(fp)
-        return u_current, fu
+        # selection
+        f_p1, x_p1 = self._selection(current, u_p, self._evaluate_with_check(u_p))
+        return current, x_p1, f_p1
 
     def _evaluate(self, params):
         current, u = params
@@ -220,22 +187,34 @@ class DE(object):
             DE/best/2/exp --> method='best', num=2, cross='exp'
         """
         # set population
-        self._p = population
+        self._pop = population
 
         # initialize
         self.initialization()
 
         # get fitness of initial x
         with futures.ProcessPoolExecutor(proc) as executor:
-            results = executor.map(self._evaluate, zip(range(self._p), self._x_current))
+            results = executor.map(self._evaluate, zip(range(self._pop), self._x_current))
 
         self._f_current = np.array([r[1] for r in sorted(list(results))])
 
         for k in range(k_max):
-            u_current, fu = self._exec_1_generation(k, mutant, num, cross, sf, cr, proc)
+            # multi-processing
+            with futures.ProcessPoolExecutor(proc) as executor:
+                results = executor.map(partial(self._process_1_generation, gen=k, mutant=mutant, num=num,
+                                               cross=cross, sf=sf, cr=cr),
+                                       range(self._pop))
 
-            # selection
-            self._selection(np.stack(u_current, axis=0), np.array(fu))
+            # correct results
+            _x_current = []
+            _f_current = []
+            for _, x, fp in sorted(results):
+                _x_current.append(x)
+                _f_current.append(fp)
+
+            # update current values
+            self._x_current = np.r_[_x_current].copy()
+            self._f_current = np.array(_f_current).copy()
 
             best_score = np.amin(self._f_current) if self._is_minimize else np.amax(self._f_current)
             logger.info('k={} best score = {}'.format(k, best_score))
@@ -270,7 +249,7 @@ class DE(object):
             DE/best/2/exp --> method='best', num=2, cross='exp'
         """
         # set population
-        self._p = population
+        self._pop = population
 
         # initialize
         self.initialization()
@@ -279,21 +258,19 @@ class DE(object):
         self._f_current = np.array([self._evaluate_with_check(x) for x in self._x_current])
 
         for k in range(k_max):
-            u_current = []
-            fu = []
-            for p in range(self._p):
+            for p in range(self._pop):
                 # mutation
-                v_p = self._get_mutant_vector(p, mutant=mutant, num=num, sf=sf)
+                v_p = self._mutation(p, mutant=mutant, num=num, sf=sf)
 
                 # crossover
                 u_p = self._crossover(v_p, self._x_current[p], cross=cross, cr=cr)
 
-                # evaluation
-                u_current.append(u_p)
-                fu.append(self._evaluate_with_check(u_p))
+                # selection
+                f_p1, x_p1 = self._selection(p, u_p, self._evaluate_with_check(u_p))
 
-            # selection
-            self._selection(np.stack(u_current, axis=0), np.array(fu))
+                # update current values
+                self._f_current[p] = f_p1
+                self._x_current[p] = x_p1
 
             best_score = np.amin(self._f_current) if self._is_minimize else np.amax(self._f_current)
             logger.info('k={} best score = {}'.format(k, best_score))
