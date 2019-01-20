@@ -46,8 +46,6 @@ class JADE(DECore):
         self._archive = []
         self._mu_cr = 0.5
         self._mu_f = 0.5
-        self._s_cr = []
-        self._s_f = []
 
     def initialization(self, x_init=None):
         """
@@ -93,22 +91,22 @@ class JADE(DECore):
                 f_ = 1.
         return f_
 
-    def _update_mu_cr(self):
+    def _update_mu_cr(self, s_cr):
         """
         update mu_cr
 
         :return:
         """
-        self._mu_cr = (1. - self._c) * self._mu_cr + self._c * np.average(self._s_cr)
+        self._mu_cr = (1. - self._c) * self._mu_cr + self._c * np.average(s_cr)
 
-    def _update_mu_f(self):
+    def _update_mu_f(self, s_f):
         """
         update mu_f
 
         :return:
         """
         # Lehmer mean
-        mean_f = np.sum(np.array(self._s_f) ** 2) / np.sum(self._s_f)
+        mean_f = np.sum(np.array(s_f) ** 2) / np.sum(s_f)
 
         self._mu_f = (1. - self._c) * self._mu_f + self._c * mean_f
 
@@ -249,8 +247,8 @@ class JADE(DECore):
 
         for k in range(k_max):
             # initialize s_cr, s_f
-            self._s_cr = []
-            self._s_f = []
+            s_cr = []
+            s_f = []
 
             # multi-processing
             with futures.ProcessPoolExecutor(proc) as executor:
@@ -265,8 +263,8 @@ class JADE(DECore):
 
                 if q:
                     self._archive.append(self._x_current[n].copy())
-                    self._s_f.append(sf)
-                    self._s_cr.append(cr)
+                    s_f.append(sf)
+                    s_cr.append(cr)
 
             # update current values
             self._x_current = np.r_[_x_current].copy()
@@ -282,8 +280,8 @@ class JADE(DECore):
                 self._archive = arc
 
             # update mu_f, mu_cr
-            self._update_mu_f()
-            self._update_mu_cr()
+            self._update_mu_f(s_f)
+            self._update_mu_cr(s_cr)
 
         # get best point
         best_idx = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)
@@ -311,8 +309,8 @@ class JADE(DECore):
 
         for k in range(k_max):
             # initialize s_cr, s_f
-            self._s_cr = []
-            self._s_f = []
+            s_cr = []
+            s_f = []
 
             for p in range(self._pop):
                 # generate F and Cr
@@ -331,8 +329,8 @@ class JADE(DECore):
                 # storing parent-x, cr, f
                 if q:
                     self._archive.append(self._x_current[p].copy())
-                    self._s_f.append(sf)
-                    self._s_cr.append(cr)
+                    s_f.append(sf)
+                    s_cr.append(cr)
 
                 # update current values
                 self._f_current[p] = f_p1
@@ -348,8 +346,8 @@ class JADE(DECore):
                 self._archive = arc
 
             # update mu_f, mu_cr
-            self._update_mu_f()
-            self._update_mu_cr()
+            self._update_mu_f(s_f)
+            self._update_mu_cr(s_cr)
 
         # get best point
         best_idx = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)
