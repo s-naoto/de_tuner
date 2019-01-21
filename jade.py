@@ -2,8 +2,6 @@ import numpy as np
 from scipy import stats
 from concurrent import futures
 from logging import getLogger
-import datetime
-from functools import partial
 
 from de_core import DECore
 
@@ -126,14 +124,16 @@ class JADE(DECore):
 
         return self._x_current[best_p_idx]
 
-    def _selection(self, p, u, fu):
+    def _selection(self, p, u):
         """
 
         :param p: current index
         :param u: trial vectors
-        :param fu: evaluation values of trial vectors
         :return:
         """
+        # evaluate optimized function
+        fu = self._evaluate_with_check(u)
+
         # score is better than current
         q1 = fu <= self._f_current[p] if self._is_minimize else fu >= self._f_current[p]
         # over lower limit
@@ -146,7 +146,7 @@ class JADE(DECore):
         f_p1 = fu if q else self._f_current[p]
         x_p1 = u if q else self._x_current[p]
 
-        return f_p1, x_p1, q
+        return p, f_p1, x_p1, q
 
     def _mutation(self, current, sf):
         """
@@ -200,29 +200,28 @@ class JADE(DECore):
 
         return u
 
-    def _process_1_generation(self, current, gen):
-        # set random seed
-        # seed = current timestamp + current index + current generation
-        seed = int(datetime.datetime.now().timestamp()) + current + gen
-        np.random.seed(seed)
+    def _mutation_crossover(self):
+        l_up = []
+        l_sf = []
+        l_cr = []
+        # for each individuals
+        for p in range(self._pop):
+            # generate F and Cr
+            sf = self._generate_f()
+            cr = self._generate_cr()
 
-        # generate F and Cr
-        sf = self._generate_f()
-        cr = self._generate_cr()
+            # mutation
+            v_p = self._mutation(p, sf=sf)
 
-        # mutation
-        v_p = self._mutation(current, sf)
+            # crossover
+            u_p = self._crossover(v_p, self._x_current[p], cr=cr)
 
-        # crossover
-        u_p = self._crossover(v_p, self._x_current[current], cr)
+            # storing trial vectors, scaling-factor, crossover-rate
+            l_up.append(u_p)
+            l_sf.append(sf)
+            l_cr.append(cr)
 
-        # selection
-        f_p1, x_p1, q = self._selection(current, u_p, self._evaluate_with_check(u_p))
-        return current, x_p1, f_p1, q, sf, cr
-
-    def _evaluate(self, params):
-        current, u = params
-        return current, self._evaluate_with_check(u)
+        return l_up, l_sf, l_cr
 
     def optimize_mp(self, k_max: int, population: int = 10, proc: [int, None] = None):
         """
@@ -250,21 +249,24 @@ class JADE(DECore):
             s_cr = []
             s_f = []
 
-            # multi-processing
+            # mutation and crossover
+            l_up, l_sf, l_cr = self._mutation_crossover()
+
+            # selection with multi-processing
             with futures.ProcessPoolExecutor(proc) as executor:
-                results = executor.map(partial(self._process_1_generation, gen=k), range(self._pop))
+                results = executor.map(self._selection, range(self._pop), l_up)
 
             # correct results
             _x_current = []
             _f_current = []
-            for n, x, fp, q, sf, cr in sorted(results):
+            for n, fp, x, q in sorted(results):
                 _x_current.append(x)
                 _f_current.append(fp)
 
                 if q:
                     self._archive.append(self._x_current[n].copy())
-                    s_f.append(sf)
-                    s_cr.append(cr)
+                    s_f.append(l_sf[n])
+                    s_cr.append(l_cr[n])
 
             # update current values
             self._x_current = np.r_[_x_current].copy()
@@ -312,25 +314,18 @@ class JADE(DECore):
             s_cr = []
             s_f = []
 
-            for p in range(self._pop):
-                # generate F and Cr
-                sf = self._generate_f()
-                cr = self._generate_cr()
+            # mutation and crossover
+            l_up, l_sf, l_cr = self._mutation_crossover()
 
-                # mutation
-                v_p = self._mutation(p, sf=sf)
-
-                # crossover
-                u_p = self._crossover(v_p, self._x_current[p], cr=cr)
-
+            for p, u_p in enumerate(l_up):
                 # selection
-                f_p1, x_p1, q = self._selection(p, u_p, self._evaluate_with_check(u_p))
+                _, f_p1, x_p1, q = self._selection(p, u_p)
 
                 # storing parent-x, cr, f
                 if q:
                     self._archive.append(self._x_current[p].copy())
-                    s_f.append(sf)
-                    s_cr.append(cr)
+                    s_f.append(l_sf[p])
+                    s_cr.append(l_cr[p])
 
                 # update current values
                 self._f_current[p] = f_p1

@@ -58,6 +58,10 @@ class DECore(object):
 
         pass
 
+    def _mutation_crossover(self, **kwargs):
+
+        pass
+
     def _evaluate_with_check(self, x):
         if np.any(x < self._low_lim) or np.any(x > self._up_lim):
             return np.inf if self._is_minimize else -np.inf
@@ -68,6 +72,10 @@ class DECore(object):
                 logger.error(ex)
                 f = np.inf if self._is_minimize else -np.inf
             return f
+
+    def _evaluate(self, params):
+        current, u = params
+        return current, self._evaluate_with_check(u)
 
     def optimize_mp(self, **kwargs):
 

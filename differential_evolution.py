@@ -1,8 +1,6 @@
 import numpy as np
 from concurrent import futures
 from logging import getLogger
-import datetime
-from functools import partial
 
 from de_core import DECore
 
@@ -36,14 +34,16 @@ class DE(DECore):
                                  upper_limit=upper_limit,
                                  minimize=minimize)
 
-    def _selection(self, p, u, fu):
+    def _selection(self, p, u):
         """
 
         :param p: current index
         :param u: trial vectors
-        :param fu: evaluation values of trial vectors
         :return:
         """
+
+        fu = self._evaluate_with_check(u)
+
         # score is better than current
         q1 = fu <= self._f_current[p] if self._is_minimize else fu >= self._f_current[p]
         # over lower limit
@@ -55,7 +55,7 @@ class DE(DECore):
 
         f_p1 = fu if q else self._f_current[p]
         x_p1 = u if q else self._x_current[p]
-        return f_p1, x_p1
+        return p, f_p1, x_p1
 
     def _mutation(self, current, mutant, num, sf):
         """
@@ -142,25 +142,18 @@ class DE(DECore):
 
         return u
 
-    def _process_1_generation(self, current, gen, mutant, num, cross, sf, cr):
-        # set random seed
-        # seed = current timestamp + current index + current generation
-        seed = int(datetime.datetime.now().timestamp()) + current + gen
-        np.random.seed(seed)
+    def _mutation_crossover(self, mutant, num, sf, cross, cr):
+        l_up = []
+        # for each individuals
+        for p in range(self._pop):
+            # mutation
+            v_p = self._mutation(p, mutant=mutant, num=num, sf=sf)
 
-        # mutation
-        v_p = self._mutation(current, mutant, num, sf)
+            # crossover
+            u_p = self._crossover(v_p, self._x_current[p], cross=cross, cr=cr)
+            l_up.append(u_p)
 
-        # crossover
-        u_p = self._crossover(v_p, self._x_current[current], cross, cr)
-
-        # selection
-        f_p1, x_p1 = self._selection(current, u_p, self._evaluate_with_check(u_p))
-        return current, x_p1, f_p1
-
-    def _evaluate(self, params):
-        current, u = params
-        return current, self._evaluate_with_check(u)
+        return l_up
 
     def optimize_mp(self,
                     k_max: int,
@@ -199,16 +192,17 @@ class DE(DECore):
         self._f_current = np.array([r[1] for r in sorted(list(results))])
 
         for k in range(k_max):
+            # mutation and crossover
+            l_up = self._mutation_crossover(mutant, num, sf, cross, cr)
+
             # multi-processing
             with futures.ProcessPoolExecutor(proc) as executor:
-                results = executor.map(partial(self._process_1_generation, gen=k, mutant=mutant, num=num,
-                                               cross=cross, sf=sf, cr=cr),
-                                       range(self._pop))
+                results = executor.map(self._selection, range(self._pop), l_up)
 
             # correct results
             _x_current = []
             _f_current = []
-            for _, x, fp in sorted(results):
+            for _, fp, x in sorted(results):
                 _x_current.append(x)
                 _f_current.append(fp)
 
@@ -258,15 +252,12 @@ class DE(DECore):
         self._f_current = np.array([self._evaluate_with_check(x) for x in self._x_current])
 
         for k in range(k_max):
-            for p in range(self._pop):
-                # mutation
-                v_p = self._mutation(p, mutant=mutant, num=num, sf=sf)
+            # mutation and crossover
+            l_up = self._mutation_crossover(mutant, num, sf, cross, cr)
 
-                # crossover
-                u_p = self._crossover(v_p, self._x_current[p], cross=cross, cr=cr)
-
+            for p, u_p in enumerate(l_up):
                 # selection
-                f_p1, x_p1 = self._selection(p, u_p, self._evaluate_with_check(u_p))
+                _, f_p1, x_p1 = self._selection(p, u_p)
 
                 # update current values
                 self._f_current[p] = f_p1
