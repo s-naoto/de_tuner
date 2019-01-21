@@ -346,8 +346,10 @@ class JADE(DECore):
                 self._archive = arc
 
             # update mu_f, mu_cr
-            self._update_mu_f(s_f)
-            self._update_mu_cr(s_cr)
+            if len(s_f) > 0:
+                self._update_mu_f(s_f)
+            if len(s_cr) > 0:
+                self._update_mu_cr(s_cr)
 
         # get best point
         best_idx = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)
