@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 
 class JADE(DECore):
     """
-    JADE
+    JADE: Adaptive Differential Evolution
     """
 
     def __init__(self,
@@ -29,8 +29,8 @@ class JADE(DECore):
         :param upper_limit: upper limit of search space 1d-array
         :param minimize: minimize flag. if the problem is minimization, then set True.
                                         otherwise set False and turning as maximization.
-        :param c
-        :param p
+        :param c: learning rate
+        :param p: selection rate for `current-pbest`
         """
 
         super(JADE, self).__init__(objective_function=objective_function,

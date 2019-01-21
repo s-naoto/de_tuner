@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 
 class SHADE(DECore):
     """
-    SHADE
+    SHADE: Success-History based Adaptive Differential Evolution
     """
 
     def __init__(self,
@@ -29,8 +29,8 @@ class SHADE(DECore):
         :param upper_limit: upper limit of search space 1d-array
         :param minimize: minimize flag. if the problem is minimization, then set True.
                                         otherwise set False and turning as maximization.
-        :param h
-        :param p
+        :param h: memory size
+        :param p: selection rate for `current-pbest`
         """
 
         super(SHADE, self).__init__(objective_function=objective_function,
