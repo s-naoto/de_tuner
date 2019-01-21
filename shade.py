@@ -67,6 +67,9 @@ class SHADE(DECore):
         # initialize k
         self._k = 0
 
+        # initialize orbit
+        self._orbit = []
+
     def _generate_cr(self, r):
         """
         generate Cr_i using N(mu_cr, 0.1)
@@ -263,6 +266,7 @@ class SHADE(DECore):
 
             best_score = np.amin(self._f_current) if self._is_minimize else np.amax(self._f_current)
             logger.info('k={} best score = {}'.format(k, best_score))
+            self._orbit.append(best_score)
 
             # remove an individual from archive when size of archive is larger than population.
             if len(self._archive) > self._pop:
@@ -324,6 +328,7 @@ class SHADE(DECore):
 
             best_score = np.amin(self._f_current) if self._is_minimize else np.amax(self._f_current)
             logger.info('k={} best score = {}'.format(k, best_score))
+            self._orbit.append(best_score)
 
             # remove an individual from archive when size of archive is larger than population.
             if len(self._archive) > self._pop:

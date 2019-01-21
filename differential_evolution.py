@@ -212,6 +212,7 @@ class DE(DECore):
 
             best_score = np.amin(self._f_current) if self._is_minimize else np.amax(self._f_current)
             logger.info('k={} best score = {}'.format(k, best_score))
+            self._orbit.append(best_score)
 
         # get best point
         best_idx = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)
@@ -265,6 +266,7 @@ class DE(DECore):
 
             best_score = np.amin(self._f_current) if self._is_minimize else np.amax(self._f_current)
             logger.info('k={} best score = {}'.format(k, best_score))
+            self._orbit.append(best_score)
 
         # get best point
         best_idx = np.argmin(self._f_current) if self._is_minimize else np.argmax(self._f_current)

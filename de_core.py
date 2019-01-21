@@ -33,6 +33,7 @@ class DECore(object):
         self._up_lim = upper_limit
         self._f_current = None
         self._is_minimize = minimize
+        self._orbit = None
 
     def initialization(self, x_init=None):
         """
@@ -45,6 +46,9 @@ class DECore(object):
             self._x_current = x_init
         else:
             self._x_current = np.random.rand(self._pop, self._nd) * (self._up_lim - self._low_lim) + self._low_lim
+
+        # initialize orbit
+        self._orbit = []
 
     def _selection(self, **kwargs):
 
@@ -84,3 +88,7 @@ class DECore(object):
     def optimize(self, **kwargs):
 
         pass
+
+    @property
+    def orbit(self):
+        return self._orbit

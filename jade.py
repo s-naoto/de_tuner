@@ -64,6 +64,9 @@ class JADE(DECore):
         self._mu_cr = 0.5
         self._mu_f = 0.5
 
+        # initialize orbit
+        self._orbit = []
+
     def _generate_cr(self):
         """
         generate Cr_i using N(mu_cr, 0.1)
@@ -274,6 +277,7 @@ class JADE(DECore):
 
             best_score = np.amin(self._f_current) if self._is_minimize else np.amax(self._f_current)
             logger.info('k={} best score = {}, mu_cr = {}, mu_f = {}'.format(k, best_score, self._mu_cr, self._mu_f))
+            self._orbit.append(best_score)
 
             # remove an individual from archive when size of archive is larger than population.
             if len(self._archive) > self._pop:
@@ -333,6 +337,7 @@ class JADE(DECore):
 
             best_score = np.amin(self._f_current) if self._is_minimize else np.amax(self._f_current)
             logger.info('k={} best score = {}, mu_cr = {}, mu_f = {}'.format(k, best_score, self._mu_cr, self._mu_f))
+            self._orbit.append(best_score)
 
             # remove an individual from archive when size of archive is larger than population.
             if len(self._archive) > self._pop:
